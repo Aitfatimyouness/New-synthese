@@ -1,0 +1,35 @@
+# Root-level generated files
+.DS_Store
+Thumbs.db
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies and builds
+node_modules/
+vendor/
+build/
+public/build/
+
+# Laravel generated/runtime data
+project-santi/database/*.sqlite
+project-santi/storage/app/*
+project-santi/storage/framework/cache/*
+project-santi/storage/framework/sessions/*
+project-santi/storage/framework/testing/*
+project-santi/storage/framework/views/*
+project-santi/storage/logs/*
+!project-santi/storage/app/.gitignore
+!project-santi/storage/framework/cache/.gitignore
+!project-santi/storage/framework/sessions/.gitignore
+!project-santi/storage/framework/testing/.gitignore
+!project-santi/storage/framework/views/.gitignore
+!project-santi/storage/logs/.gitignore
+
+# IDE and test cache
+.idea/
+.vscode/
+.phpunit.cache/
+coverage/
