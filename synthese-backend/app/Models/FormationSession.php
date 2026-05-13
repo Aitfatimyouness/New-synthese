@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FormationSession extends Model
 {
@@ -37,5 +38,10 @@ class FormationSession extends Model
     public function animateur(): BelongsTo
     {
         return $this->belongsTo(User::class, 'animateur_id');
+    }
+
+    public function absences(): HasMany
+    {
+        return $this->hasMany(Absence::class);
     }
 }

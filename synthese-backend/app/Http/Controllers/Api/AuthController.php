@@ -94,10 +94,11 @@ class AuthController extends Controller
             'email' => $user->email,
             'matricule' => $user->matricule,
             'profile_title' => $user->profile_title,
+            'centre_id' => $user->centre_id,
             'roles' => $user->roles->map(fn ($role) => [
                 'name' => $role->name,
                 'label' => $role->label,
-                'permissions' => $role->permissions->pluck('name')->values(),
+                'permissions' => $role->permissions->pluck('name')->unique()->values(),
             ])->values(),
         ];
     }

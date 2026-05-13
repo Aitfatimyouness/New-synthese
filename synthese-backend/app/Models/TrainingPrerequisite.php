@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Deplacement extends Model
+class TrainingPrerequisite extends Model
 {
     protected $guarded = [];
 
@@ -14,8 +14,8 @@ class Deplacement extends Model
         return $this->belongsTo(Formation::class);
     }
 
-    public function user(): BelongsTo
+    public function requiredFormation(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Formation::class, 'required_formation_id');
     }
 }

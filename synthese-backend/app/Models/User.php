@@ -27,6 +27,7 @@ class User extends Authenticatable
         'phone',
         'profile_title',
         'status',
+        'centre_id',
         'password',
     ];
 
@@ -67,6 +68,11 @@ class User extends Authenticatable
     public function tokens(): HasMany
     {
         return $this->hasMany(ApiToken::class);
+    }
+
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class);
     }
 
     public function hasRole(string ...$roles): bool

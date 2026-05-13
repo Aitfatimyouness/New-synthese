@@ -14,6 +14,11 @@ Route::middleware('auth.api')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', DashboardController::class);
     Route::get('/analytics', [OperationalController::class, 'analytics'])->middleware('permission:rapports.read');
+    Route::get('/global-search', [OperationalController::class, 'globalSearch']);
+    Route::get('/calendar', [OperationalController::class, 'calendar'])->middleware('permission:planning.read');
+    Route::get('/certificates/{id}/pdf', [OperationalController::class, 'certificatePdf'])->middleware('permission:certificates.read');
+    Route::get('/rapports/pdf', [OperationalController::class, 'reportPdf'])->middleware('permission:rapports.read');
+    Route::get('/rapports/{id}/pdf', [OperationalController::class, 'reportPdf'])->middleware('permission:rapports.read');
 
     $resources = [
         'users' => ['users.read', 'users.write'],
@@ -32,6 +37,12 @@ Route::middleware('auth.api')->group(function () {
         'evaluations' => ['evaluations.read', 'evaluations.write'],
         'rapports' => ['rapports.read', 'rapports.write'],
         'notifications' => ['notifications.read', 'notifications.write'],
+        'enrollments' => ['enrollments.read', 'enrollments.write'],
+        'prerequisites' => ['formations.read', 'formations.write'],
+        'participant-evaluations' => ['evaluations.read', 'evaluations.write'],
+        'pedagogical-evaluations' => ['pedagogy.evaluate', 'pedagogy.evaluate'],
+        'certificates' => ['certificates.read', 'certificates.write'],
+        'logs' => ['logs.read', 'logs.read'],
     ];
 
     foreach ($resources as $resource => [$readPermission, $writePermission]) {
@@ -41,6 +52,12 @@ Route::middleware('auth.api')->group(function () {
         Route::post("/{$resource}", [OperationalController::class, 'store'])
             ->defaults('resource', $resource)
             ->middleware("permission:{$writePermission}");
+        Route::get("/{$resource}/export/csv", [OperationalController::class, 'exportCsv'])
+            ->defaults('resource', $resource)
+            ->middleware("permission:{$readPermission}");
+        Route::post("/{$resource}/import/csv", [OperationalController::class, 'importCsv'])
+            ->defaults('resource', $resource)
+            ->middleware("permission:imports.write");
         Route::get("/{$resource}/{id}", [OperationalController::class, 'show'])
             ->defaults('resource', $resource)
             ->middleware("permission:{$readPermission}");
@@ -48,6 +65,12 @@ Route::middleware('auth.api')->group(function () {
             ->defaults('resource', $resource)
             ->middleware("permission:{$writePermission}");
         Route::delete("/{$resource}/{id}", [OperationalController::class, 'destroy'])
+            ->defaults('resource', $resource)
+            ->middleware("permission:{$writePermission}");
+        Route::post("/{$resource}/{id}/archive", [OperationalController::class, 'archive'])
+            ->defaults('resource', $resource)
+            ->middleware("permission:{$writePermission}");
+        Route::post("/{$resource}/{id}/restore", [OperationalController::class, 'restore'])
             ->defaults('resource', $resource)
             ->middleware("permission:{$writePermission}");
     }

@@ -7,17 +7,22 @@ use App\Models\ActivityLog;
 use App\Models\Centre;
 use App\Models\Deplacement;
 use App\Models\Document;
+use App\Models\Certificate;
+use App\Models\Enrollment;
 use App\Models\Evaluation;
 use App\Models\Formation;
 use App\Models\FormationSession;
 use App\Models\Hebergement;
 use App\Models\OfpptNotification;
+use App\Models\ParticipantEvaluation;
+use App\Models\PedagogicalEvaluation;
 use App\Models\Permission;
 use App\Models\Rapport;
 use App\Models\Role;
 use App\Models\Salle;
 use App\Models\SiteFormation;
 use App\Models\Theme;
+use App\Models\TrainingPrerequisite;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -42,6 +47,11 @@ class DatabaseSeeder extends Seeder
             ['logistique.read', 'Consulter logistique'], ['logistique.write', 'Gerer logistique'],
             ['rapports.read', 'Consulter rapports'], ['rapports.write', 'Generer rapports'],
             ['notifications.read', 'Consulter notifications'], ['notifications.write', 'Gerer notifications'],
+            ['enrollments.read', 'Consulter inscriptions'], ['enrollments.write', 'Gerer inscriptions'],
+            ['pedagogy.evaluate', 'Evaluer pedagogiquement'],
+            ['certificates.read', 'Consulter certificats'], ['certificates.write', 'Emettre certificats'],
+            ['logs.read', 'Consulter logs'], ['security.manage', 'Gerer securite'], ['settings.write', 'Parametrer plateforme'],
+            ['imports.write', 'Importer donnees Excel'],
         ])->mapWithKeys(fn ($item) => [
             $item[0] => Permission::create(['name' => $item[0], 'label' => $item[1]]),
         ]);
@@ -50,37 +60,37 @@ class DatabaseSeeder extends Seeder
             'administrateur' => ['Administrateur systeme', [
                 'users.read', 'users.write',
                 'roles.read', 'roles.write',
-                'centres.read',
-                'formations.read', 'themes.read', 'planning.read',
-                'absences.read', 'documents.read', 'evaluations.read',
-                'logistique.read', 'rapports.read', 'notifications.read',
+                'logs.read', 'security.manage', 'settings.write', 'imports.write',
             ]],
             'responsable_cdc' => ['Responsable CDC', [
                 'formations.read', 'formations.write',
                 'themes.read', 'themes.write',
-                'planning.read',
-                'absences.read', 'documents.read',
-                'evaluations.read', 'logistique.read',
+                'evaluations.read', 'pedagogy.evaluate',
                 'rapports.read', 'rapports.write',
-                'notifications.read',
+                'notifications.read', 'imports.write',
             ]],
             'responsable_formation' => ['Responsable de formation', [
                 'formations.read', 'formations.write',
                 'themes.read', 'planning.read', 'planning.write',
-                'absences.read', 'documents.read',
+                'enrollments.read', 'enrollments.write',
+                'absences.read', 'absences.write', 'documents.read',
                 'evaluations.read',
                 'logistique.read', 'logistique.write',
-                'rapports.read', 'notifications.read',
+                'rapports.read', 'rapports.write',
+                'certificates.read', 'certificates.write',
+                'notifications.read',
             ]],
             'responsable_dr' => ['Responsable DR', [
                 'formations.read', 'themes.read', 'planning.read',
-                'absences.read', 'documents.read',
+                'absences.read',
                 'evaluations.read', 'logistique.read',
                 'rapports.read', 'notifications.read',
             ]],
             'formateur_participant' => ['Formateur participant', [
                 'formations.read', 'themes.read', 'planning.read',
-                'documents.read',
+                'documents.read', 'absences.read',
+                'enrollments.read', 'enrollments.write',
+                'certificates.read',
                 'evaluations.read', 'evaluations.write',
                 'notifications.read',
             ]],
@@ -89,7 +99,7 @@ class DatabaseSeeder extends Seeder
                 'planning.read',
                 'absences.read', 'absences.write',
                 'documents.read', 'documents.write',
-                'evaluations.read',
+                'evaluations.read', 'pedagogy.evaluate',
                 'notifications.read',
             ]],
         ];
@@ -130,6 +140,10 @@ class DatabaseSeeder extends Seeder
             ['CDC-IND', 'CDC Genie Industriel', 'Tanger-Tetouan-Al Hoceima', 'Tanger', 'Zone industrielle Gzenaya'],
             ['CDC-GES', 'CDC Gestion Commerce', 'Rabat-Sale-Kenitra', 'Rabat', 'Avenue Annakhil, Rabat'],
         ])->map(fn ($row) => Centre::create(['code' => $row[0], 'name' => $row[1], 'region' => $row[2], 'city' => $row[3], 'address' => $row[4]]));
+
+        foreach ($users as $user) {
+            $user->update(['centre_id' => $centres[0]->id]);
+        }
 
         $sites = collect([
             ['ISTA NTIC Sidi Maarouf', 'Casablanca', 'Sidi Maarouf, Casablanca', 28, 0],
@@ -172,7 +186,24 @@ class DatabaseSeeder extends Seeder
             $formation->participants()->attach($users['formateur_participant-FP402']->id, ['role' => 'participant', 'progress' => rand(15, 75), 'status' => 'inscrit']);
             $formation->participants()->attach($users['formateur_animateur-FA501']->id, ['role' => 'animateur', 'progress' => 100, 'status' => 'affecte']);
             $formation->participants()->attach($users['formateur_animateur-FA502']->id, ['role' => 'animateur', 'progress' => 100, 'status' => 'affecte']);
+
+            foreach ([$users['formateur_participant-FP401'], $users['formateur_participant-FP402']] as $participant) {
+                Enrollment::create([
+                    'formation_id' => $formation->id,
+                    'participant_id' => $participant->id,
+                    'reviewed_by' => $users['responsable_formation-RF201']->id,
+                    'status' => 'accepted',
+                    'decision_note' => 'Inscription validee dans le plan national.',
+                    'reviewed_at' => now(),
+                ]);
+            }
         }
+
+        TrainingPrerequisite::create([
+            'formation_id' => $formations[1]->id,
+            'required_formation_id' => $formations[0]->id,
+            'rule' => 'completed',
+        ]);
 
         $formations->each(function (Formation $formation, int $index) use ($users, $sites, $salles) {
             $themeA = Theme::create(['formation_id' => $formation->id, 'animateur_id' => $users['formateur_animateur-FA501']->id, 'title' => 'Cadre methodologique', 'description' => 'Objectifs, diagnostic initial et cadrage du parcours.', 'start_date' => $formation->start_date, 'end_date' => $formation->start_date->copy()->addDays(2), 'sort_order' => 1, 'progress' => min(100, $formation->progress + 10)]);
@@ -193,6 +224,9 @@ class DatabaseSeeder extends Seeder
                 Hebergement::create(['formation_id' => $formation->id, 'user_id' => $participant->id, 'hotel_name' => 'Residence OFPPT '.$formation->centre->city, 'city' => $formation->centre->city, 'check_in' => $formation->start_date, 'check_out' => $formation->end_date, 'status' => 'reserve']);
                 Deplacement::create(['formation_id' => $formation->id, 'user_id' => $participant->id, 'from_city' => 'Rabat', 'to_city' => $formation->centre->city, 'travel_date' => $formation->start_date->copy()->subDay(), 'transport_mode' => 'train', 'status' => 'planifie']);
                 Evaluation::create(['formation_id' => $formation->id, 'user_id' => $participant->id, 'content_score' => rand(4, 5), 'animation_score' => rand(4, 5), 'logistics_score' => rand(3, 5), 'impact_score' => rand(4, 5), 'comment' => 'Formation utile avec des ateliers directement applicables.']);
+                ParticipantEvaluation::create(['formation_id' => $formation->id, 'participant_id' => $participant->id, 'trainer_id' => $users['formateur_animateur-FA501']->id, 'trainer_score' => rand(4, 5), 'training_score' => rand(4, 5), 'logistics_score' => rand(3, 5), 'comment' => 'Animation claire et supports directement exploitables.']);
+                PedagogicalEvaluation::create(['formation_id' => $formation->id, 'trainer_id' => $users['formateur_animateur-FA501']->id, 'participant_id' => $participant->id, 'competency' => 'Mise en oeuvre professionnelle', 'score' => rand(3, 5), 'progression_delta' => rand(8, 18), 'feedback' => 'Progression observee pendant les ateliers.']);
+                Certificate::create(['formation_id' => $formation->id, 'participant_id' => $participant->id, 'type' => 'convocation', 'reference' => 'CNV-'.$formation->id.'-'.$participant->id, 'issued_at' => now()->toDateString(), 'status' => 'issued']);
             }
         }
 
